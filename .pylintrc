@@ -1,0 +1,57 @@
+[MASTER]
+ignore=CVS
+ignore-patterns=test_.*\.py
+extension-pkg-whitelist=pydantic
+
+[MESSAGES CONTROL]
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    import-error,
+    no-member,
+    too-many-instance-attributes
+
+[FORMAT]
+max-line-length=88
+indent-string='    '
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,id,db,pd,np
+
+[DESIGN]
+max-args=7
+max-attributes=12
+max-locals=20
+max-returns=6
+max-branches=15
+max-statements=60
+max-parents=7
+max-public-methods=25
+
+[TYPECHECK]
+ignored-modules=
+    torch,
+    torchvision,
+    transformers,
+    sentence_transformers,
+    bertopic,
+    umap,
+    hdbscan,
+    lightgbm,
+    xgboost,
+    sklearn,
+    shap,
+    grad_cam,
+    nibabel,
+    praw,
+    tweepy
+
+[SIMILARITIES]
+min-similarity-lines=4
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=no

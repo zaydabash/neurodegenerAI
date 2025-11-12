@@ -283,6 +283,11 @@ gcloud run deploy trends-api \
 
 ## Testing
 
+### Test Coverage
+**Current test coverage: ~6% (shared library: 89%)**
+
+The project includes comprehensive unit tests for shared utilities and configuration management. Test coverage is continuously improved as new features are added.
+
 ### Run All Tests
 ```bash
 make test
@@ -300,11 +305,22 @@ pytest neurodegenerai/src/tests/
 pytest trend-detector/src/tests/
 ```
 
-### Test Coverage
+### Test Coverage Reports
 ```bash
+# Generate HTML coverage report
 pytest --cov=shared --cov=neurodegenerai/src --cov=trend-detector/src \
        --cov-report=html --cov-report=term-missing
+
+# View coverage report
+open htmlcov/index.html
 ```
+
+### CI/CD Testing
+All tests are automatically run via GitHub Actions on every push and pull request:
+- **Linting**: Ruff, Black, Flake8, Pylint
+- **Type Checking**: MyPy with strict type checking
+- **Unit Tests**: Pytest with coverage reporting
+- **Integration Tests**: Docker container health checks
 
 ## Performance
 
@@ -321,14 +337,90 @@ pytest --cov=shared --cov=neurodegenerai/src --cov=trend-detector/src \
 
 ## Security & Compliance
 
-### Data Privacy
-- **No Persistent Storage**: Data processed in-memory only
-- **HTTPS Encryption**: All API communications encrypted
-- **Input Validation**: Comprehensive request validation
-- **Rate Limiting**: Built-in rate limiting and throttling
+### Security Best Practices
+
+#### Credential Management
+- **Environment Variables**: All sensitive credentials stored in environment variables
+- **No Hardcoded Secrets**: No API keys, passwords, or tokens in source code
+- **GitIgnore Protection**: `.env` files and secrets directories excluded from version control
+- **Example Files**: Use `env.example` as a template (never commit actual credentials)
+
+#### Input Validation
+- **Pydantic Schemas**: All API requests validated using Pydantic models
+- **Type Checking**: Strict type validation for all inputs
+- **Sanitization**: Input data sanitized to prevent injection attacks
+- **Rate Limiting**: Built-in rate limiting and request throttling
+
+#### API Security
+- **HTTPS Encryption**: All production API communications use HTTPS
+- **CORS Configuration**: Configurable CORS settings for cross-origin requests
+- **Authentication Ready**: APIs designed to support authentication middleware
+- **Error Handling**: Secure error messages that don't expose sensitive information
+
+#### Data Privacy
+- **No Persistent Storage**: Patient data processed in-memory only
+- **Temporary Processing**: Data cleared after processing
+- **Audit Logging**: All API requests logged for monitoring
+- **Compliance**: Designed with HIPAA considerations (not certified)
+
+### Security Configuration
+
+#### Environment Variables
+Never commit `.env` files. Use `env.example` as a template:
+```bash
+# Copy example file
+cp env.example .env
+
+# Edit with your credentials (never commit this file)
+nano .env
+```
+
+#### Database Security
+For production deployments:
+- Use strong, unique passwords for database credentials
+- Store credentials in environment variables or secret management systems
+- Enable SSL/TLS for database connections
+- Use database connection pooling with authentication
+
+#### Docker Security
+- Use environment variables for sensitive configuration
+- Avoid hardcoded passwords in `docker-compose.yml`
+- Use Docker secrets for production deployments
+- Regularly update base images for security patches
+
+### Code Quality & Security Scanning
+
+#### Linting Tools
+```bash
+# Run Ruff linter
+ruff check .
+
+# Run Flake8
+flake8 .
+
+# Run Pylint
+pylint .
+
+# Run Black formatter
+black . --check
+```
+
+#### Type Checking
+```bash
+# Run MyPy type checker
+mypy . --ignore-missing-imports
+```
+
+#### Security Scanning
+- **GitHub Actions**: Automated security scanning on every push
+- **Dependency Scanning**: Regular dependency vulnerability checks
+- **Code Quality**: Automated code quality checks via CI/CD pipeline
 
 ### Medical Disclaimer
 **Important**: NeuroDegenerAI is for **research purposes only**. Not intended for clinical diagnosis or treatment decisions.
+
+### Reporting Security Issues
+If you discover a security vulnerability, please email security@neurodegenerai.com (or create a private security advisory on GitHub) rather than opening a public issue.
 
 
 ## Contributing

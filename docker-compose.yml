@@ -137,9 +137,9 @@ services:
     image: postgres:15-alpine
     container_name: trends-postgres
     environment:
-      - POSTGRES_DB=trends
-      - POSTGRES_USER=trends
-      - POSTGRES_PASSWORD=trends123
+      - POSTGRES_DB=${POSTGRES_DB:-trends}
+      - POSTGRES_USER=${POSTGRES_USER:-trends}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme_in_production}
     ports:
       - "5432:5432"
     volumes:

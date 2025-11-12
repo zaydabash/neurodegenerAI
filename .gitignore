@@ -142,11 +142,23 @@ tmp/
 temp/
 *.tmp
 
-# Secrets
+# Secrets and credentials
 *.key
 *.pem
 *.crt
+*.p12
+*.pfx
 secrets/
+**/secrets/
+.env
+.env.local
+.env.*.local
+*.env
+!env.example
+*.secret
+credentials.json
+service-account*.json
+*gcp-key*.json
 
 # Node.js (for optional Next.js landing page)
 node_modules/
