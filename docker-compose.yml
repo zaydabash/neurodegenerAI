@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Consolidated Core API
+  core-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: core-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=dev
+      - LOG_LEVEL=INFO
+      - POSTGRES_USER=trends
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=trends
+      - DB_URL=postgresql://trends:changeme@postgres:5432/trends
+      - NEURO_DEMO_MODE=true
+    volumes:
+      - ./neurodegenerai/data:/app/data
+      - ./neurodegenerai/models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - suite-network
+
+  # Unified Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+    container_name: dashboard-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - ENV=dev
+      - CORE_API_URL=http://core-api:8000
+    depends_on:
+      - core-api
+    networks:
+      - suite-network
+
+  # Database Layer (Mandatory)
+  postgres:
+    image: postgres:15-alpine
+    container_name: suite-postgres
+    environment:
+      - POSTGRES_DB=trends
+      - POSTGRES_USER=trends
+      - POSTGRES_PASSWORD=changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trends"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - suite-network
+
+  # Search/Management (Useful for production hardening)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: suite-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@neurotrends.ai
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - suite-network
+
+volumes:
+  postgres_data:
+
+networks:
+  suite-network:
+    driver: bridge

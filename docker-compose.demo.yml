@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Override services for demo mode
+  neuro-api:
+    environment:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+      - NEURO_DEMO_MODE=true
+      - ADNI_DATA_DIR=/app/data
+      - NEURO_MODEL_DIR=/app/models
+    profiles:
+      - demo
+
+  neuro-ui:
+    environment:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+      - NEURO_DEMO_MODE=true
+    profiles:
+      - demo
+
+  trends-api:
+    environment:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+      - DB_URL=sqlite:///./data/trends.db
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+    profiles:
+      - demo
+
+  trends-ui:
+    environment:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+    profiles:
+      - demo
+
+  hub-ui:
+    environment:
+      - ENV=demo
+      - LOG_LEVEL=INFO
+      - NEURO_API_URL=http://neuro-api:8080
+      - TRENDS_API_URL=http://trends-api:8080
+    profiles:
+      - demo

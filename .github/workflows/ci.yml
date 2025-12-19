@@ -1,0 +1,203 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: "3.11"
+  POETRY_VERSION: "1.6.1"
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    name: Lint and Format
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy flake8 pylint
+
+      - name: Run ruff linter
+        run: ruff check .
+
+      - name: Run flake8 linter
+        run: flake8 . || true
+
+      - name: Run pylint
+        run: pylint --disable=all --enable=security,import-error . || true
+
+      - name: Run black formatter check
+        run: black --check .
+
+      - name: Run mypy type checker
+        run: mypy . --ignore-missing-imports --explicit-package-bases || true
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r neurodegenerai/requirements.txt
+          pip install -r trend-detector/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          pytest --cov=shared --cov=neurodegenerai/src --cov=trend-detector/src \
+                 --cov-report=xml --cov-report=html --cov-report=term-missing \
+                 --cov-fail-under=10
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  build-docker:
+    runs-on: ubuntu-latest
+    name: Build Docker Images
+    needs: [lint-and-format, test]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build NeuroDegenerAI API image
+        run: |
+          docker build -f neurodegenerai/Dockerfile --target api \
+                       -t neuro-api:latest .
+
+      - name: Build NeuroDegenerAI UI image
+        run: |
+          docker build -f neurodegenerai/Dockerfile --target ui \
+                       -t neuro-ui:latest .
+
+      - name: Build Trend Detector API image
+        run: |
+          docker build -f trend-detector/Dockerfile --target api \
+                       -t trends-api:latest .
+
+      - name: Build Trend Detector UI image
+        run: |
+          docker build -f trend-detector/Dockerfile --target ui \
+                       -t trends-ui:latest .
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    needs: [build-docker]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'neuro-api:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  integration-test:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    needs: [build-docker]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start services with docker-compose
+        run: |
+          docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: |
+          timeout 300 bash -c 'until curl -f http://localhost:9001/health; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:9002/health; do sleep 5; done'
+
+      - name: Run integration tests
+        run: |
+          # Test NeuroDegenerAI API
+          curl -f http://localhost:9001/health
+
+          # Test Trend Detector API
+          curl -f http://localhost:9002/health
+
+          # Test API endpoints
+          curl -X POST http://localhost:9001/predict/tabular \
+               -H "Content-Type: application/json" \
+               -d '{"age": 75, "sex": 0, "apoe4": 1, "mmse": 24, "abeta": 180, "tau": 350, "ptau": 28}'
+
+      - name: Stop services
+        run: docker-compose down
+
+  performance-test:
+    runs-on: ubuntu-latest
+    name: Performance Tests
+    needs: [build-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker-compose up -d --build
+
+      - name: Wait for services
+        run: |
+          timeout 300 bash -c 'until curl -f http://localhost:9001/health; do sleep 5; done'
+          timeout 300 bash -c 'until curl -f http://localhost:9002/health; do sleep 5; done'
+
+      - name: Run performance tests
+        run: |
+          # Load test with Apache Bench
+          ab -n 100 -c 10 http://localhost:9001/health
+          ab -n 100 -c 10 http://localhost:9002/health
+
+      - name: Stop services
+        run: docker-compose down

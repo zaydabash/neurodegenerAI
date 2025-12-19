@@ -1,0 +1,158 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+  AR_REPO: ${{ secrets.AR_REPO }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloud Run
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker ${{ env.AR_REPO }}
+
+      - name: Build and push NeuroDegenerAI API image
+        run: |
+          docker build -f neurodegenerai/Dockerfile --target api \
+                       -t ${{ env.AR_REPO }}/neuro-api:${{ github.ref_name }} \
+                       -t ${{ env.AR_REPO }}/neuro-api:latest .
+          docker push ${{ env.AR_REPO }}/neuro-api:${{ github.ref_name }}
+          docker push ${{ env.AR_REPO }}/neuro-api:latest
+
+      - name: Build and push NeuroDegenerAI UI image
+        run: |
+          docker build -f neurodegenerai/Dockerfile --target ui \
+                       -t ${{ env.AR_REPO }}/neuro-ui:${{ github.ref_name }} \
+                       -t ${{ env.AR_REPO }}/neuro-ui:latest .
+          docker push ${{ env.AR_REPO }}/neuro-ui:${{ github.ref_name }}
+          docker push ${{ env.AR_REPO }}/neuro-ui:latest
+
+      - name: Build and push Trend Detector API image
+        run: |
+          docker build -f trend-detector/Dockerfile --target api \
+                       -t ${{ env.AR_REPO }}/trends-api:${{ github.ref_name }} \
+                       -t ${{ env.AR_REPO }}/trends-api:latest .
+          docker push ${{ env.AR_REPO }}/trends-api:${{ github.ref_name }}
+          docker push ${{ env.AR_REPO }}/trends-api:latest
+
+      - name: Build and push Trend Detector UI image
+        run: |
+          docker build -f trend-detector/Dockerfile --target ui \
+                       -t ${{ env.AR_REPO }}/trends-ui:${{ github.ref_name }} \
+                       -t ${{ env.AR_REPO }}/trends-ui:latest .
+          docker push ${{ env.AR_REPO }}/trends-ui:${{ github.ref_name }}
+          docker push ${{ env.AR_REPO }}/trends-ui:latest
+
+      - name: Deploy NeuroDegenerAI API to Cloud Run
+        run: |
+          gcloud run deploy neuro-api \
+            --image ${{ env.AR_REPO }}/neuro-api:${{ github.ref_name }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --cpu 2 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --concurrency 80 \
+            --timeout 300 \
+            --set-env-vars ENV=production,LOG_LEVEL=INFO,NEURO_DEMO_MODE=true
+
+      - name: Deploy NeuroDegenerAI UI to Cloud Run
+        run: |
+          gcloud run deploy neuro-ui \
+            --image ${{ env.AR_REPO }}/neuro-ui:${{ github.ref_name }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5 \
+            --concurrency 100 \
+            --timeout 300 \
+            --set-env-vars ENV=production,LOG_LEVEL=INFO,NEURO_DEMO_MODE=true
+
+      - name: Deploy Trend Detector API to Cloud Run
+        run: |
+          gcloud run deploy trends-api \
+            --image ${{ env.AR_REPO }}/trends-api:${{ github.ref_name }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 2Gi \
+            --cpu 2 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --concurrency 80 \
+            --timeout 300 \
+            --set-env-vars ENV=production,LOG_LEVEL=INFO,DB_URL=sqlite:///./data/trends.db,EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+      - name: Deploy Trend Detector UI to Cloud Run
+        run: |
+          gcloud run deploy trends-ui \
+            --image ${{ env.AR_REPO }}/trends-ui:${{ github.ref_name }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5 \
+            --concurrency 100 \
+            --timeout 300 \
+            --set-env-vars ENV=production,LOG_LEVEL=INFO
+
+      - name: Get service URLs
+        run: |
+          echo "Neuro API URL:" $(gcloud run services describe neuro-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          echo "Neuro UI URL:" $(gcloud run services describe neuro-ui --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          echo "Trends API URL:" $(gcloud run services describe trends-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          echo "Trends UI URL:" $(gcloud run services describe trends-ui --region=${{ env.GCP_REGION }} --format="value(status.url)")
+
+      - name: Test deployed services
+        run: |
+          NEURO_API_URL=$(gcloud run services describe neuro-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          TRENDS_API_URL=$(gcloud run services describe trends-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+
+          # Test health endpoints
+          curl -f $NEURO_API_URL/health
+          curl -f $TRENDS_API_URL/health
+
+      - name: Create deployment summary
+        run: |
+          NEURO_API_URL=$(gcloud run services describe neuro-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          NEURO_UI_URL=$(gcloud run services describe neuro-ui --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          TRENDS_API_URL=$(gcloud run services describe trends-api --region=${{ env.GCP_REGION }} --format="value(status.url)")
+          TRENDS_UI_URL=$(gcloud run services describe trends-ui --region=${{ env.GCP_REGION }} --format="value(status.url)")
+
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### NeuroDegenerAI" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧠 **API**: [$NEURO_API_URL]($NEURO_API_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🖥️ **UI**: [$NEURO_UI_URL]($NEURO_UI_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Trend Detector" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 **API**: [$TRENDS_API_URL]($TRENDS_API_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🖥️ **UI**: [$TRENDS_UI_URL]($TRENDS_UI_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
