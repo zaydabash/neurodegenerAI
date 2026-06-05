@@ -57,7 +57,7 @@
 
 ### CNN Model (MRI)
 - **Architecture**: ResNet18 adapted for 2.5D MRI slices
-- **Input**: 64x64x64 MRI volumes → 16 slices
+- **Input**: 64x64x64 MRI volumes -> 16 slices
 - **Layers**: 4 convolutional blocks + global average pooling
 - **Output**: Binary classification
 - **Pretraining**: ImageNet weights (adapted)
@@ -129,7 +129,7 @@
 - **GPU**: Optional but recommended for CNN inference
 
 ### API Specifications
-- **Endpoint**: `/predict/tabular`, `/predict/mri`, `/predict/ensemble`
+- **Endpoint**: `/v1/neuro/tabular`, `/v1/neuro/mri`, `/v1/neuro/eeg`
 - **Input Format**: JSON with required fields
 - **Output Format**: JSON with predictions and explanations
 - **Response Time**: <2 seconds for tabular, <10 seconds for MRI

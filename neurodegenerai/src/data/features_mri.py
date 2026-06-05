@@ -311,7 +311,8 @@ class MRIFeatureExtractor(LoggerMixin):
         kernel_size = 3
         local_mean = ndimage.uniform_filter(sampled_volume, size=kernel_size)
         local_var = (
-            ndimage.uniform_filter(sampled_volume**2, size=kernel_size) - local_mean**2
+            ndimage.uniform_filter(sampled_volume**2, size=kernel_size)
+            - local_mean**2
         )
 
         features.update(

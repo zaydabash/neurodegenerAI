@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     libpq-dev \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy all project files to satisfy shared deps and migration

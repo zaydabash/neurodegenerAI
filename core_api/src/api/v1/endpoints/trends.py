@@ -15,13 +15,10 @@ from core_api.src.api.v1.schemas import (
     TrendingTopicsResponse,
 )
 from shared.lib.logging import get_logger, log_api_request
+from shared.lib.repository import save_social_posts, save_trend_topics
 
 logger = get_logger(__name__)
 router = APIRouter()
-
-# Mock components (to be properly initialized in Phase 2)
-mock_stream = None
-io_utils = None
 
 
 @router.get("/top", response_model=TrendingTopicsResponse)
@@ -31,13 +28,18 @@ async def get_top_topics(window: int = 24, k: int = 10):
     request_id = str(uuid.uuid4())
 
     try:
-        from trend_detector.src.ingest.mock_stream import MockStream
+        from trend_detector.src.ingest.provider import get_stream_provider
+        from trend_detector.src.pipeline.live_topics import cluster_posts
 
-        global mock_stream
-        if mock_stream is None:
-            mock_stream = MockStream()
+        provider = get_stream_provider()
 
-        trending_data = mock_stream.get_trending_topics(window)
+        # Cluster a live (or demo) corpus into topics. Fall back to the
+        # provider's precomputed demo topics only if clustering yields nothing.
+        corpus = provider.get_recent_posts(200)
+        trending_data = cluster_posts(corpus, k=k)
+        if not trending_data:
+            trending_data = provider.get_trending_topics(window)
+
         topics = []
 
         for topic_data in trending_data[:k]:
@@ -51,6 +53,8 @@ async def get_top_topics(window: int = 24, k: int = 10):
             )
             topics.append(topic)
 
+        save_trend_topics(topic.dict() for topic in topics)
+
         response = TrendingTopicsResponse(topics=topics, window_hours=window)
         log_api_request(
             "/v1/trends/top",
@@ -62,39 +66,42 @@ async def get_top_topics(window: int = 24, k: int = 10):
         return response
     except Exception as e:
         logger.error(f"Trends top topics failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/search", response_model=SearchResponse)
 async def search_posts(request: SearchRequest):
-    """Search social media posts."""
+    """Search social media posts using semantic ranking (keyword fallback)."""
     start_time = datetime.now()
     request_id = str(uuid.uuid4())
 
     try:
-        from trend_detector.src.ingest.mock_stream import MockStream
+        from trend_detector.src.ingest.provider import get_stream_provider
+        from trend_detector.src.pipeline.search import SemanticSearch
 
-        global mock_stream
-        if mock_stream is None:
-            mock_stream = MockStream()
+        provider = get_stream_provider()
+        searcher = SemanticSearch()
 
-        all_posts = mock_stream.get_recent_posts(request.limit * 2)
-        results = []
+        # Pull a candidate corpus, then rank it against the query.
+        corpus = provider.get_recent_posts(max(request.limit * 5, 50))
+        ranked = searcher.search(request.query, corpus, limit=request.limit)
 
-        for post_data in all_posts:
-            if request.query.lower() in post_data["text"].lower():
-                post = PostData(
-                    text=post_data["text"],
-                    source=post_data["source"],
-                    timestamp=post_data["timestamp"],
-                    url=post_data.get("url"),
-                    author=post_data.get("author"),
-                    score=post_data.get("score", 0),
-                )
-                results.append(post)
+        results = [
+            PostData(
+                text=post["text"],
+                source=post["source"],
+                timestamp=post["timestamp"],
+                url=post.get("url"),
+                author=post.get("author"),
+                score=post.get("score", 0),
+                metadata={"relevance": post["relevance"]}
+                if "relevance" in post
+                else None,
+            )
+            for post in ranked
+        ]
 
-                if len(results) >= request.limit:
-                    break
+        save_social_posts(ranked)
 
         response = SearchResponse(
             query=request.query,
@@ -113,4 +120,4 @@ async def search_posts(request: SearchRequest):
         return response
     except Exception as e:
         logger.error(f"Trends search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

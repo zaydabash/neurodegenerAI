@@ -45,30 +45,46 @@ def test_get_settings_singleton() -> None:
     assert settings1 is settings2
 
 
-def test_environment_helpers() -> None:
-    """Test environment helper functions."""
-    settings = Settings()
+def test_environment_helpers(monkeypatch) -> None:
+    """Test environment helper functions.
+
+    The helpers read the cached settings singleton, so we drive them by
+    setting the environment and reloading settings rather than mutating a
+    throwaway ``Settings`` instance.
+    """
+    from shared.lib.config import reload_settings
 
     # Test development mode
-    settings.env = "dev"
+    monkeypatch.setenv("ENV", "dev")
+    reload_settings()
     assert is_development() is True
     assert is_production() is False
 
     # Test production mode
-    settings.env = "prod"
+    monkeypatch.setenv("ENV", "prod")
+    reload_settings()
     assert is_development() is False
     assert is_production() is True
 
+    # Restore default singleton for following tests
+    monkeypatch.delenv("ENV", raising=False)
+    reload_settings()
 
-def test_demo_mode() -> None:
+
+def test_demo_mode(monkeypatch) -> None:
     """Test demo mode detection."""
-    settings = Settings()
+    from shared.lib.config import reload_settings
 
-    settings.neuro_demo_mode = True
+    monkeypatch.setenv("NEURO_DEMO_MODE", "true")
+    reload_settings()
     assert is_demo_mode() is True
 
-    settings.neuro_demo_mode = False
+    monkeypatch.setenv("NEURO_DEMO_MODE", "false")
+    reload_settings()
     assert is_demo_mode() is False
+
+    monkeypatch.delenv("NEURO_DEMO_MODE", raising=False)
+    reload_settings()
 
 
 def test_data_directory_paths() -> None:
@@ -86,8 +102,8 @@ def test_data_directory_paths() -> None:
     trends_data_dir = get_data_dir("trends")
     trends_model_dir = get_model_dir("trends")
 
-    assert "trend-detector" in trends_data_dir
-    assert "trend-detector" in trends_model_dir
+    assert "trend_detector" in trends_data_dir
+    assert "trend_detector" in trends_model_dir
 
 
 def test_ensure_directories() -> None:

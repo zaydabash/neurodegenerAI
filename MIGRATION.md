@@ -1,4 +1,4 @@
-# Migration Guide: Legacy → Hardened Architecture
+# Migration Guide: Legacy -> Hardened Architecture
 
 This document outlines the architectural changes made during the system consolidation.
 
@@ -12,7 +12,7 @@ The Neuro-Trends Suite has been transformed from a **distributed monolith** into
 ### 1. API Consolidation
 **Before:**
 - `neurodegenerai/src/api/main.py` (Port 9001)
-- `trend-detector/src/api/main.py` (Port 9002)
+- `trend_detector/src/api/main.py` (Port 9002)
 
 **After:**
 - `core_api/src/api/main.py` (Port 8000)
@@ -22,7 +22,7 @@ The Neuro-Trends Suite has been transformed from a **distributed monolith** into
 ### 2. UI Unification
 **Before:**
 - `neurodegenerai/src/app/streamlit_app.py` (Port 8501)
-- `trend-detector/src/app/streamlit_app.py` (Port 8502)
+- `trend_detector/src/app/streamlit_app.py` (Port 8502)
 - `hub_app.py` (Port 8503)
 
 **After:**
@@ -44,7 +44,7 @@ The Neuro-Trends Suite has been transformed from a **distributed monolith** into
 **Added:**
 - PII Scrubber (`shared/lib/io_utils.py`)
 - Medical data validation (`neurodegenerai/src/data/adni_ingest.py`)
-- Exponential backoff for Reddit API (`trend-detector/src/ingest/reddit_stream.py`)
+- Exponential backoff for Reddit API (`trend_detector/src/ingest/reddit_stream.py`)
 
 ---
 
@@ -73,7 +73,7 @@ The Neuro-Trends Suite has been transformed from a **distributed monolith** into
 3. **Database connections:**
    ```python
    # Old
-   db_url = "sqlite:///./trend-detector/trends.db"
+   db_url = "sqlite:///./trend_detector/trends.db"
 
    # New
    from shared.lib.database import get_db_manager
@@ -104,12 +104,12 @@ The Neuro-Trends Suite has been transformed from a **distributed monolith** into
 The following files are **no longer used** and can be safely removed:
 
 - `neurodegenerai/src/api/main.py`
-- `trend-detector/src/api/main.py`
+- `trend_detector/src/api/main.py`
 - `neurodegenerai/src/app/streamlit_app.py`
-- `trend-detector/src/app/streamlit_app.py`
+- `trend_detector/src/app/streamlit_app.py`
 - `hub_app.py`
 - `neurodegenerai/Dockerfile` (replaced by root `Dockerfile`)
-- `trend-detector/Dockerfile` (replaced by root `Dockerfile`)
+- `trend_detector/Dockerfile` (replaced by root `Dockerfile`)
 
 ---
 

@@ -5,9 +5,10 @@ description = "Production-ready monorepo with NeuroDegenerAI and Real-Time Trend
 authors = ["Neuro-Trends Team <team@neurotrends.ai>"]
 readme = "README.md"
 packages = [
-    {include = "shared", from = "."},
-    {include = "neurodegenerai/src", from = ".", to = "neurodegenerai"},
-    {include = "trend-detector/src", from = ".", to = "trend_detector"},
+    {include = "shared"},
+    {include = "core_api"},
+    {include = "neurodegenerai"},
+    {include = "trend_detector"},
 ]
 
 [tool.poetry.dependencies]
@@ -137,7 +138,7 @@ module = [
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["neurodegenerai/src/tests", "trend-detector/src/tests", "shared/tests"]
+testpaths = ["neurodegenerai/src/tests", "trend_detector/src/tests", "shared/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -146,7 +147,7 @@ addopts = [
     "--strict-config",
     "--cov=shared",
     "--cov=neurodegenerai/src",
-    "--cov=trend-detector/src",
+    "--cov=trend_detector/src",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-fail-under=10",

@@ -1,46 +1,23 @@
 version: '3.8'
 
+# Demo override for the unified stack. Runs the Core API and Dashboard in
+# demo mode against a local SQLite database, so no PostgreSQL is required.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up core-api dashboard
+
 services:
-  # Override services for demo mode
-  neuro-api:
+  core-api:
     environment:
       - ENV=demo
       - LOG_LEVEL=INFO
       - NEURO_DEMO_MODE=true
-      - ADNI_DATA_DIR=/app/data
-      - NEURO_MODEL_DIR=/app/models
-    profiles:
-      - demo
-
-  neuro-ui:
-    environment:
-      - ENV=demo
-      - LOG_LEVEL=INFO
-      - NEURO_DEMO_MODE=true
-    profiles:
-      - demo
-
-  trends-api:
-    environment:
-      - ENV=demo
-      - LOG_LEVEL=INFO
-      - DB_URL=sqlite:///./data/trends.db
+      - DB_URL=sqlite:////app/data/trends.db
       - EMBEDDING_MODEL=all-MiniLM-L6-v2
-    profiles:
-      - demo
+    depends_on: []
 
-  trends-ui:
+  dashboard:
     environment:
       - ENV=demo
       - LOG_LEVEL=INFO
-    profiles:
-      - demo
-
-  hub-ui:
-    environment:
-      - ENV=demo
-      - LOG_LEVEL=INFO
-      - NEURO_API_URL=http://neuro-api:8080
-      - TRENDS_API_URL=http://trends-api:8080
-    profiles:
-      - demo
+      - CORE_API_URL=http://core-api:8000

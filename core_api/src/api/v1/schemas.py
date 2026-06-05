@@ -38,8 +38,8 @@ class TabularPredictionRequest(BaseModel):
 
     age: float = Field(..., ge=0, le=120)
     sex: int = Field(..., ge=0, le=1)  # 0=Female, 1=Male
-    apoe4: int = Field(..., ge=0, le=2)
     mmse: float = Field(..., ge=0, le=30)
+    apoe4: int | None = Field(None, ge=0, le=2)  # optional; not required for all models
     cdr: float | None = Field(None, ge=0, le=3)
     abeta: float | None = None
     tau: float | None = None
@@ -76,6 +76,8 @@ class EEGPredictionRequest(BaseModel):
 
 class PredictionResponse(BaseModel):
     """Consolidated prediction response."""
+
+    model_config = {"protected_namespaces": ()}
 
     prediction: int = Field(..., description="Predicted class")
     label: str = Field(..., description="Human readable label")

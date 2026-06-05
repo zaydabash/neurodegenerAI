@@ -2,6 +2,7 @@
 Unified Core API for Neuro-Trends Suite.
 """
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -41,10 +42,22 @@ app = FastAPI(
 )
 
 # CORS Security
+#
+# ``CORS_ALLOW_ORIGINS`` is a comma-separated list of allowed origins. It
+# defaults to "*" for local development. Note that the CORS spec forbids the
+# wildcard origin together with credentials, so credentials are only enabled
+# when an explicit origin list is configured.
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+_allow_credentials = _cors_origins != ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Hardened in production phase
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

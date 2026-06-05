@@ -10,8 +10,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored to repo root so it only matches the setuptools build output,
+# not application packages such as shared/lib/.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -97,7 +99,7 @@ dmypy.json
 
 # Data directories
 neurodegenerai/data/
-trend-detector/data/
+trend_detector/data/
 *.db
 *.sqlite
 *.sqlite3
@@ -105,7 +107,7 @@ trend-detector/data/
 # Model artifacts
 neurodegenerai/models/
 neurodegenerai/reports/
-trend-detector/reports/
+trend_detector/reports/
 *.pkl
 *.joblib
 *.h5
