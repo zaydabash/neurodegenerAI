@@ -19,8 +19,8 @@ services:
       - DB_URL=postgresql://trends:changeme@postgres:5432/trends
       - NEURO_DEMO_MODE=true
     volumes:
-      - ./neurodegenerai/data:/app/data
-      - ./neurodegenerai/models:/app/models
+      - ./neurodegenerai/data:/app/neurodegenerai/data
+      - ./neurodegenerai/models:/app/neurodegenerai/models
     depends_on:
       postgres:
         condition: service_healthy

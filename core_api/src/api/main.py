@@ -12,6 +12,7 @@ from core_api.src.api.v1.endpoints import neuro, trends
 from core_api.src.api.v1.schemas import HealthResponse
 from shared.lib.config import ensure_directories, get_settings
 from shared.lib.logging import get_logger, setup_logging
+from shared.lib.torch_compat import apply_torch_workarounds
 
 # Setup logging
 setup_logging(service_name="core_api")
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
     """Unified application lifespan."""
     logger.info("Initializing Core API...")
     ensure_directories()
+    apply_torch_workarounds()
 
     # Initialize Database
     from shared.lib.database import get_db_manager
