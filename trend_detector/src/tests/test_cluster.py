@@ -5,6 +5,7 @@ Tests for Trend Detector clustering functionality.
 from unittest.mock import Mock, patch
 
 import numpy as np
+import pandas as pd
 import pytest
 
 # Skip (rather than fail collection) when the optional BERTopic stack is absent.
@@ -103,8 +104,9 @@ class TestTopicClusterer:
             np.array([0, 1, 0, 2]),
             np.array([[0.8, 0.2], [0.1, 0.9], [0.7, 0.3], [0.2, 0.8]]),
         )
-        mock_model.get_topic_info.return_value = Mock(
-            to_dict=lambda x: [{"Topic": 0}, {"Topic": 1}, {"Topic": 2}]
+        # BERTopic returns a DataFrame from get_topic_info().
+        mock_model.get_topic_info.return_value = pd.DataFrame(
+            [{"Topic": 0}, {"Topic": 1}, {"Topic": 2}]
         )
         mock_bertopic.return_value = mock_model
 
@@ -286,8 +288,8 @@ def test_clustering_pipeline(sample_documents):
             np.array([0, 0, 1, 1, 0]),
             np.array([[0.8, 0.2], [0.7, 0.3], [0.2, 0.8], [0.3, 0.7], [0.6, 0.4]]),
         )
-        mock_model.get_topic_info.return_value = Mock(
-            to_dict=lambda x: [
+        mock_model.get_topic_info.return_value = pd.DataFrame(
+            [
                 {"Topic": 0, "Count": 3, "Name": "Healthcare AI"},
                 {"Topic": 1, "Count": 2, "Name": "Medical Technology"},
             ]
