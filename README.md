@@ -81,7 +81,7 @@ streamlit run dashboard_app.py --server.port 8501
 ### NeuroDegenerAI
 - **Tabular Biomarker Analysis**: Soft-voting ensemble using LightGBM + XGBoost (scikit-learn gradient-boosting/random-forest/logistic ensemble fallback when the native libraries are unavailable)
 - **MRI Structural Analysis**: A 3D CNN (`nn.Conv3d`) over the full volume, with an occlusion saliency heatmap
-- **EEG Alzheimer's Detection**: A band-power CNN trained on **real EEG** from OpenNeuro ds004504 (Alzheimer's vs healthy controls), evaluated with leakage-free subject-level cross-validation. Run `python scripts/train_eeg_real.py` to download the recordings and build the model; until then the endpoint falls back to a synthetic 1D-CNN state decoder.
+- **EEG Alzheimer's Detection**: A band-power CNN trained on **real EEG** from OpenNeuro ds004504 (Alzheimer's vs healthy controls), evaluated with repeated subject-level cross-validation (see Results for the metrics and their limits). Run `python scripts/train_eeg_real.py` to download the recordings and build the model; until then the endpoint falls back to a synthetic 1D-CNN state decoder.
 - **Real or synthetic training data**: The tabular model trains on real clinical metadata from OpenNeuro **ds004504** (88 subjects: Alzheimer's, frontotemporal dementia, and healthy controls, with Age/Gender/MMSE/diagnosis) when reachable, and falls back to synthetic ADNI-like data offline. Set `NEURO_DATA_SOURCE` to `auto` (default), `real`, or `synthetic`. The active source is reported in every prediction's `model_name` and explanation.
 - **Works out of the box**: Models are trained on first use and cached, so every endpoint returns real predictions without shipping an artifact. Disable demo mode to serve your own trained models.
 - **Medical Data Validation**: Enforced schemas with range checks for all biomarker inputs
@@ -109,16 +109,35 @@ toward slower frequencies.
 
 ![Real EEG band-power signature: Alzheimer's vs control](docs/images/eeg_bandpower_ad_vs_control.png)
 
-Evaluated with leakage-free subject-level GroupKFold cross-validation (no
-subject appears in both train and test):
+Evaluated with repeated stratified subject-level cross-validation (5 folds x 5
+random partitions, so no subject appears in both train and test within a fold).
+Values are the mean and standard deviation across the 5 repeats; the interval is
+a bootstrap 95% CI over subjects.
 
 | Metric | Value |
 | --- | --- |
-| Subject-level ROC-AUC | 0.85 |
-| Subject-level accuracy | 0.77 |
+| Subject-level ROC-AUC | 0.84 +/- 0.04 (95% CI 0.74 to 0.93) |
+| PR-AUC (average precision) | 0.89 +/- 0.03 (AD prevalence 0.55) |
+| Sensitivity / specificity at 0.5 | 0.74 / 0.81 |
+| Accuracy at 0.5 | 0.78 +/- 0.04 (majority baseline 0.55) |
 | Subjects / epochs | 65 / 13,282 |
 
-Reproduce with `python scripts/train_eeg_real.py --max-per-class 40`.
+Limitations to keep in mind:
+
+- 65 subjects from a single site with no external validation, so the intervals
+  above are wide and the results are unlikely to transfer unchanged to other
+  cohorts or recording setups.
+- Features and hyperparameters were chosen while looking at cross-validation
+  results on the same subjects, so the numbers are mildly optimistic.
+- A logistic regression on subject-mean band power performs comparably (AUC
+  0.85 +/- 0.01), so the signal is in the band-power features rather than in
+  the network.
+- Sex is unbalanced between groups (33% male in the Alzheimer's group, 62% in
+  controls). Sex alone gives AUC 0.64, and the model's AUC stays high within
+  each sex (0.89 in males, 0.81 in females), so sex does not explain the result.
+
+Reproduce with `python scripts/train_eeg_real.py --max-per-class 40` and
+`python scripts/evaluate_eeg_real.py --repeats 5`.
 
 ### Clinical separation by diagnosis
 
