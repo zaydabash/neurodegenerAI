@@ -7,9 +7,12 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 
-from ..pipeline.cluster import TopicClusterer
-from ..pipeline.embed import EmbeddingGenerator, EmbeddingProcessor
-from ..pipeline.topics import TrendAnalyzer
+# Skip (rather than fail collection) when the optional BERTopic stack is absent.
+pytest.importorskip("bertopic")
+
+from ..pipeline.cluster import TopicClusterer  # noqa: E402
+from ..pipeline.embed import EmbeddingGenerator, EmbeddingProcessor  # noqa: E402
+from ..pipeline.topics import TrendAnalyzer  # noqa: E402
 
 
 class TestEmbeddingGenerator:

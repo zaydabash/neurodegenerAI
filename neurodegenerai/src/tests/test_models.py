@@ -96,21 +96,23 @@ class TestTabularFeatureEngineer:
 
         # Check that new features are created
         assert X_engineered.shape[1] > X.shape[1]
-        assert "AGE_SQUARED" in X_engineered.columns
+        assert "AGE_MMSE_INTERACTION" in X_engineered.columns
         assert "ABETA_TAU_RATIO" in X_engineered.columns
 
     def test_get_feature_groups(self):
         """Test feature group extraction."""
         engineer = TabularFeatureEngineer()
 
+        # Quantile binning needs a population, so use enough distinct rows.
+        n = 20
         X = pd.DataFrame(
             {
-                "AGE": [70],
-                "SEX": [0],
-                "MMSE": [24],
-                "APOE4": [1],
-                "ABETA": [180],
-                "TAU": [350],
+                "AGE": np.arange(60, 60 + n),
+                "SEX": np.arange(n) % 2,
+                "MMSE": np.arange(10, 10 + n),
+                "APOE4": np.arange(n) % 3,
+                "ABETA": np.linspace(120, 300, n),
+                "TAU": np.linspace(200, 500, n),
             }
         )
 
@@ -121,6 +123,8 @@ class TestTabularFeatureEngineer:
         assert "genetic" in feature_groups
         assert "cognitive" in feature_groups
         assert "biomarkers" in feature_groups
+        assert "AGE" in feature_groups["demographic"]
+        assert "ABETA_TAU_RATIO" in feature_groups["ratios"]
 
 
 class TestModelPredictor:
