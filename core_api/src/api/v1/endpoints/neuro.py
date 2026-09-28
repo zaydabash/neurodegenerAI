@@ -213,6 +213,9 @@ async def predict_eeg(request: EEGPredictionRequest):
             request_id=request_id,
         )
         return response
+    except ValueError as e:
+        logger.warning(f"Neuro EEG input rejected: {e}")
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Neuro EEG prediction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

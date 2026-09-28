@@ -78,3 +78,9 @@ def test_eeg_returns_valid_state(service):
     out = service.predict_eeg(rng.normal(0, 1, (8, 250)))
     assert out["prediction"] in {"Normal", "Sleep", "Anomalous"}
     assert 0.0 <= out["confidence"] <= 1.0
+
+
+def test_demo_eeg_rejects_wrong_shape_with_clear_message(service):
+    rng = np.random.default_rng(2)
+    with pytest.raises(ValueError, match="expects 8 channels x 250 samples"):
+        service.predict_eeg(rng.normal(0, 1, (19, 2000)))

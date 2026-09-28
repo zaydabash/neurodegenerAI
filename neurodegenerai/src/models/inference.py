@@ -246,6 +246,10 @@ def _build_tabular_ensemble():
 
 MRI_SHAPE = (24, 24, 24)
 
+# Input shape of the synthetic EEG state decoder (EEGNet1D defaults).
+EEG_DEMO_CHANNELS = 8
+EEG_DEMO_LENGTH = 250
+
 
 def _build_cnn3d():
     import torch.nn as nn
@@ -578,8 +582,16 @@ class NeuroInferenceService:
         self._eeg = EEGPredictor(model_path=str(cache) if cache.exists() else None)
 
     def predict_eeg(self, data: np.ndarray) -> dict[str, Any]:
+        arr = np.asarray(data, dtype=np.float32)
+        if arr.shape != (EEG_DEMO_CHANNELS, EEG_DEMO_LENGTH):
+            raise ValueError(
+                f"The demo EEG decoder expects {EEG_DEMO_CHANNELS} channels x "
+                f"{EEG_DEMO_LENGTH} samples, got shape {tuple(arr.shape)}. Run "
+                "scripts/train_eeg_real.py to serve the real model, which accepts "
+                "19-channel recordings of any length."
+            )
         self._ensure_eeg()
-        return self._eeg.predict(np.asarray(data, dtype=np.float32))
+        return self._eeg.predict(arr)
 
 
 def get_inference_service() -> NeuroInferenceService:
