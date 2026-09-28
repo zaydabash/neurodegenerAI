@@ -1,5 +1,7 @@
 # Production-grade Consolidated Dockerfile
-FROM python:3.11-slim as base
+# Pinned to bookworm: on newer Debian releases the default GCC rejects the C
+# generated for hdbscan 0.8.33, which has no prebuilt wheel and must compile.
+FROM python:3.11-slim-bookworm as base
 
 # Set working directory
 WORKDIR /app
